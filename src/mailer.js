@@ -26,11 +26,23 @@ async function sendMail(filePath, opts = { subject: "Daily Report", text: "Pleas
 
   const mailOptions = {
     from: process.env.SMTP_USER,
-    to: process.env.MAIL_TO,
+    // allow passing `to` in opts or use MAIL_TO env; support comma-separated string or array
+    to: undefined,
     subject: opts.subject,
     text: opts.text,
     attachments: filePath ? [{ filename: "report.xlsx", path: filePath }] : undefined,
   };
+  // Resolve recipients
+  let recipients = opts.to || process.env.MAIL_TO || "";
+  if (Array.isArray(recipients)) {
+    mailOptions.to = recipients;
+  } else if (typeof recipients === "string") {
+    // split comma-separated values and trim
+    const list = recipients.split(",").map((s) => s.trim()).filter(Boolean);
+    mailOptions.to = list.length === 1 ? list[0] : list;
+  } else {
+    mailOptions.to = recipients;
+  }
 
   // retry logic
   const maxAttempts = 3;
